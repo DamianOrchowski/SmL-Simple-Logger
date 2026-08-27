@@ -11,6 +11,35 @@
 
 namespace fs = std::filesystem;
 
+enum LOG_TYPE_ENUM
+{
+    LOG,
+    WARN,
+    ERR,
+    CRIT,
+};
+
+struct LogType
+{
+    LOG_TYPE_ENUM e;
+    std::string toString()
+    {
+        switch (e)
+        {
+        case LOG:
+            return "LOG";
+        case WARN:
+            return "WARNING";
+        case ERR:
+            return "ERROR";
+        case CRIT:
+            return "CRITICAL";
+        default:
+            return "LOG";
+        }
+    }
+};
+
 class Logger
 {
 private:
@@ -22,6 +51,8 @@ private:
     std::fstream _logFile;
 
     fs::path _logsPath = fs::path("logs/");
+
+    bool _logDate = false;
 
     struct tm get_time()
     {
@@ -97,7 +128,7 @@ public:
             create_log_file();
         }
         fs::path logFilePath = _logsPath / _logFileName;
-        _logFile.open(logFilePath);
+        _logFile.open(logFilePath, std::ios::app);
     }
 
     void CloseLogFile()
@@ -107,6 +138,21 @@ public:
             return;
         }
         _logFile.close();
+    }
+
+    void LogMessage(LogType type, std::string message)
+    {
+        OpenLogFile();
+        struct tm now = get_time();
+        char buffer[80];
+        std::string format = "%H:%M:%S";
+        if (_logDate)
+        {
+            format = "%H:%M:%S %d-%m-%Y";
+        }
+        std::strftime(buffer, sizeof(buffer), format.c_str(), &now);
+        _logFile << "[" << buffer << "] = [" << type.toString() << "] = " << message << '\n';
+        CloseLogFile();
     }
 };
 
