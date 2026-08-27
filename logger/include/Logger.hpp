@@ -18,7 +18,7 @@ private:
 
     std::string _logFileOpeningLine;
 
-    const char *_logFileName;
+    std::string _logFileName;
     std::fstream _logFile;
 
     fs::path _logsPath = fs::path("logs/");
@@ -86,7 +86,28 @@ public:
         _logFileOpeningLine = openingLine;
     }
 
-    void CloseLogFile();
+    void OpenLogFile()
+    {
+        if (_logFile.is_open())
+        {
+            return;
+        }
+        if (_logFileName.empty())
+        {
+            create_log_file();
+        }
+        fs::path logFilePath = _logsPath / _logFileName;
+        _logFile.open(logFilePath);
+    }
+
+    void CloseLogFile()
+    {
+        if (!_logFile.is_open())
+        {
+            return;
+        }
+        _logFile.close();
+    }
 };
 
 #endif
