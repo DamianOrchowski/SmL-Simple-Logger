@@ -97,10 +97,12 @@ private:
 public:
     Logger()
     {
+        create_log_file();
     }
 
     ~Logger()
     {
+        CloseLogFile();
     }
 
     static Logger *getInstance()
