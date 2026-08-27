@@ -22,7 +22,7 @@ enum LOG_TYPE_ENUM
 struct LogType
 {
     LOG_TYPE_ENUM e;
-    LogType(LOG_TYPE_ENUM _e):e(_e) {}
+    LogType(LOG_TYPE_ENUM _e) : e(_e) {}
 
     std::string toString()
     {
@@ -47,13 +47,12 @@ class Logger
 private:
     static Logger *_instance;
     static std::string _logFileOpeningLine;
+    static bool _logDate;
 
     std::string _logFileName;
     std::fstream _logFile;
 
     fs::path _logsPath = fs::path("logs/");
-
-    bool _logDate = false;
 
     struct tm get_time()
     {
@@ -120,6 +119,11 @@ public:
         _logFileOpeningLine = openingLine;
     }
 
+    static void SetLogDate(bool logDate)
+    {
+        _logDate = logDate;
+    }
+
     void OpenLogFile()
     {
         if (_logFile.is_open())
@@ -155,37 +159,48 @@ public:
     }
 };
 
-#define SET_OPENING_LINE(line) \
-    do {\
-        Logger::SetOpeningLine(line);\
-    } while (false) 
-
-#define LOG(message) \
-    do {\
-        std::ostringstream oss;\
-        oss << message;\
-        Logger::getInstance()->LogMessage(LogType(MESS), oss.str());\
+#define SET_LOG_DATE(log)       \
+    do                          \
+    {                           \
+        Logger::SetLogDate(log) \
     } while (false)
 
-#define LOG_WARNING(message) \
-    do {\
-        std::ostringstream oss;\
-        oss << message;\
-        Logger::getInstance()->LogMessage(LogType(WARN), oss.str());\
+#define SET_OPENING_LINE(line)        \
+    do                                \
+    {                                 \
+        Logger::SetOpeningLine(line); \
     } while (false)
 
-#define LOG_ERROR(message) \
-    do {\
-        std::ostringstream oss;\
-        oss << message;\
-        Logger::getInstance()->LogMessage(LogType(ERR), oss.str());\
+#define LOG(message)                                                 \
+    do                                                               \
+    {                                                                \
+        std::ostringstream oss;                                      \
+        oss << message;                                              \
+        Logger::getInstance()->LogMessage(LogType(MESS), oss.str()); \
     } while (false)
 
-#define LOG_CRITICAL(message) \
-    do {\
-        std::ostringstream oss;\
-        oss << message;\
-        Logger::getInstance()->LogMessage(LogType(CRIT), oss.str());\
+#define LOG_WARNING(message)                                         \
+    do                                                               \
+    {                                                                \
+        std::ostringstream oss;                                      \
+        oss << message;                                              \
+        Logger::getInstance()->LogMessage(LogType(WARN), oss.str()); \
+    } while (false)
+
+#define LOG_ERROR(message)                                          \
+    do                                                              \
+    {                                                               \
+        std::ostringstream oss;                                     \
+        oss << message;                                             \
+        Logger::getInstance()->LogMessage(LogType(ERR), oss.str()); \
+    } while (false)
+
+#define LOG_CRITICAL(message)                                        \
+    do                                                               \
+    {                                                                \
+        std::ostringstream oss;                                      \
+        oss << message;                                              \
+        Logger::getInstance()->LogMessage(LogType(CRIT), oss.str()); \
     } while (false)
 
 #endif
