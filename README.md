@@ -33,5 +33,16 @@ log file, but at least there's anything. You
 can set log file openning message and enable 
 logging date in your files.
 ```c++
+SET_LOG_DATE(true);
+SET_OPENING_LINE("Opening Line");
+```
+## Log Variables
+If you want to log a variable you just use an
+`std::ostringstream` syntax. It will look just
+like this:
+```c++
+int x = 2;
+int y = 4;
 
+LOG("x + y = " << x + y);
 ```

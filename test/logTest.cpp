@@ -3,7 +3,7 @@
 
 int main()
 {
-    LOG("test");
+    LOG("test " << 1 << " yo " << true);
 
     return 0;
 }
