@@ -13,7 +13,7 @@ namespace fs = std::filesystem;
 
 enum LOG_TYPE_ENUM
 {
-    LOG,
+    MESS,
     WARN,
     ERR,
     CRIT,
@@ -22,12 +22,14 @@ enum LOG_TYPE_ENUM
 struct LogType
 {
     LOG_TYPE_ENUM e;
+    LogType(LOG_TYPE_ENUM _e):e(_e) {}
+
     std::string toString()
     {
         switch (e)
         {
-        case LOG:
-            return "LOG";
+        case MESS:
+            return "MESSAGE";
         case WARN:
             return "WARNING";
         case ERR:
@@ -35,7 +37,7 @@ struct LogType
         case CRIT:
             return "CRITICAL";
         default:
-            return "LOG";
+            return "MESSAGE";
         }
     }
 };
@@ -44,8 +46,7 @@ class Logger
 {
 private:
     static Logger *_instance;
-
-    std::string _logFileOpeningLine;
+    static std::string _logFileOpeningLine;
 
     std::string _logFileName;
     std::fstream _logFile;
@@ -61,11 +62,11 @@ private:
         return now;
     }
 
-    const char *format_file_name(struct tm now)
+    std::string format_file_name(struct tm now)
     {
         char buffer[80];
         std::strftime(buffer, sizeof(buffer), "%d-%m-%Y %H_%M_%S.log", &now);
-        return buffer;
+        return (std::string)buffer;
     }
 
     void create_log_file()
@@ -77,7 +78,7 @@ private:
             fs::create_directories(_logsPath);
         }
         fs::path logFilePath = _logsPath / _logFileName;
-        _logFile.open(logFilePath);
+        OpenLogFile();
         if (!_logFile.is_open())
         {
             std::cerr << "_logFile with path: " << logFilePath << " failed to open!\n";
@@ -91,7 +92,7 @@ private:
             _logFile << _logFileOpeningLine << '\n';
         }
         _logFile << "============= Logs Start =============\n";
-        _logFile.close();
+        CloseLogFile();
     }
 
 public:
@@ -114,7 +115,7 @@ public:
         return _instance;
     }
 
-    void SetOpeningLine(std::string openingLine)
+    static void SetOpeningLine(std::string openingLine)
     {
         _logFileOpeningLine = openingLine;
     }
@@ -124,10 +125,6 @@ public:
         if (_logFile.is_open())
         {
             return;
-        }
-        if (_logFileName.empty())
-        {
-            create_log_file();
         }
         fs::path logFilePath = _logsPath / _logFileName;
         _logFile.open(logFilePath, std::ios::app);
@@ -157,5 +154,38 @@ public:
         CloseLogFile();
     }
 };
+
+#define SET_OPENING_LINE(line) \
+    do {\
+        Logger::SetOpeningLine(line);\
+    } while (false) 
+
+#define LOG(message) \
+    do {\
+        std::ostringstream oss;\
+        oss << message;\
+        Logger::getInstance()->LogMessage(LogType(MESS), oss.str());\
+    } while (false)
+
+#define LOG_WARNING(message) \
+    do {\
+        std::ostringstream oss;\
+        oss << message;\
+        Logger::getInstance()->LogMessage(LogType(WARN), oss.str());\
+    } while (false)
+
+#define LOG_ERROR(message) \
+    do {\
+        std::ostringstream oss;\
+        oss << message;\
+        Logger::getInstance()->LogMessage(LogType(ERR), oss.str());\
+    } while (false)
+
+#define LOG_CRITICAL(message) \
+    do {\
+        std::ostringstream oss;\
+        oss << message;\
+        Logger::getInstance()->LogMessage(LogType(CRIT), oss.str());\
+    } while (false)
 
 #endif

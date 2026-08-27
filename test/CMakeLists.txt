@@ -7,9 +7,8 @@ if(BUILD_TESTS)
         "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
     )
 
-    if(DEFINED TEST_SOURCES AND NOT STREQUAL "")
-        set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tests")
-        foreach(TEST_SOURCE IN LISTS TEST_SOURCES)
+    message(${TEST_SOURCES})
+    foreach(TEST_SOURCE IN LISTS TEST_SOURCES)
             get_filename_component(TEST_NAME
                 ${TEST_SOURCE}
                 NAME_WE
@@ -26,5 +25,4 @@ if(BUILD_TESTS)
                 COMMAND ${TEST_NAME}
             )
         endforeach()
-    endif()
 endif()
