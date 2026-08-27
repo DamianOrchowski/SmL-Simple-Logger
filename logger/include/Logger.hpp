@@ -81,6 +81,11 @@ public:
         return _instance;
     }
 
+    void SetOpeningLine(std::string openingLine)
+    {
+        _logFileOpeningLine = openingLine;
+    }
+
     void CloseLogFile();
 };
 
