@@ -53,6 +53,8 @@ private:
     static bool _logDate;
 
     std::string _logFileName;
+    std::string _logFileName_full;
+    uint16_t _logFileCount = 0;
     std::fstream _logFile;
 
     fs::path _logsPath = fs::path("logs/");
@@ -70,7 +72,7 @@ private:
     std::string format_file_name(struct tm now)
     {
         char buffer[80];
-        std::strftime(buffer, sizeof(buffer), "%d-%m-%Y %H_%M_%S.log", &now);
+        std::strftime(buffer, sizeof(buffer), "%d-%m-%Y %H_%M_%S", &now);
         return (std::string)buffer;
     }
 
@@ -79,13 +81,19 @@ private:
         std::unique_lock<std::mutex> lock(_mutex);
 
         struct tm now = get_time();
-        _logFileName = format_file_name(now);
+        if (_logFileName.empty())
+        {
+            _logFileName = format_file_name(now);
+        }
+        std::ostringstream oss;
+        oss << _logFileName << "." << _logFileCount << ".log";
+        _logFileName_full = oss.str();
         if (!fs::exists(_logsPath) || !fs::is_directory(_logsPath))
         {
             fs::create_directories(_logsPath);
         }
-        fs::path logFilePath = _logsPath / _logFileName;
-        open_log_file();
+        fs::path logFilePath = _logsPath / _logFileName_full;
+        _logFile.open(logFilePath, std::ios::app);
         if (!_logFile.is_open())
         {
             std::cerr << "_logFile with path: " << logFilePath << " failed to open!\n";
@@ -101,6 +109,7 @@ private:
             _logFile << _logFileOpeningLine << '\n';
         }
         _logFile << "============= Logs Start =============\n";
+        _logFileCount++;
         close_log_file();
     }
 
@@ -110,7 +119,12 @@ private:
         {
             return;
         }
-        fs::path logFilePath = _logsPath / _logFileName;
+        fs::path logFilePath = _logsPath / _logFileName_full;
+        if (!fs::exists(logFilePath) || fs::file_size(logFilePath) >= (int)(INT32_MAX / 1000))
+        {
+            create_log_file();
+        }
+        logFilePath = _logsPath / _logFileName_full;
         _logFile.open(logFilePath, std::ios::app);
     }
 
