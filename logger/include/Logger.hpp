@@ -78,7 +78,7 @@ private:
             fs::create_directories(_logsPath);
         }
         fs::path logFilePath = _logsPath / _logFileName;
-        OpenLogFile();
+        open_log_file();
         if (!_logFile.is_open())
         {
             std::cerr << "_logFile with path: " << logFilePath << " failed to open!\n";
@@ -92,7 +92,26 @@ private:
             _logFile << _logFileOpeningLine << '\n';
         }
         _logFile << "============= Logs Start =============\n";
-        CloseLogFile();
+        close_log_file();
+    }
+
+    void open_log_file()
+    {
+        if (_logFile.is_open())
+        {
+            return;
+        }
+        fs::path logFilePath = _logsPath / _logFileName;
+        _logFile.open(logFilePath, std::ios::app);
+    }
+
+    void close_log_file()
+    {
+        if (!_logFile.is_open())
+        {
+            return;
+        }
+        _logFile.close();
     }
 
 public:
@@ -103,7 +122,7 @@ public:
 
     ~Logger()
     {
-        CloseLogFile();
+        close_log_file();
     }
 
     static std::shared_ptr<Logger> getInstance()
@@ -125,28 +144,9 @@ public:
         _logDate = logDate;
     }
 
-    void OpenLogFile()
-    {
-        if (_logFile.is_open())
-        {
-            return;
-        }
-        fs::path logFilePath = _logsPath / _logFileName;
-        _logFile.open(logFilePath, std::ios::app);
-    }
-
-    void CloseLogFile()
-    {
-        if (!_logFile.is_open())
-        {
-            return;
-        }
-        _logFile.close();
-    }
-
     void LogMessage(LogType type, std::string message)
     {
-        OpenLogFile();
+        open_log_file();
         struct tm now = get_time();
         char buffer[80];
         std::string format = "%H:%M:%S";
@@ -156,7 +156,7 @@ public:
         }
         std::strftime(buffer, sizeof(buffer), format.c_str(), &now);
         _logFile << "[" << buffer << "] = [" << type.toString() << "] = " << message << '\n';
-        CloseLogFile();
+        close_log_file();
     }
 };
 
