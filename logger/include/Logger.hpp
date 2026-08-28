@@ -8,6 +8,8 @@
 #include <iostream>
 #include <filesystem>
 #include <string>
+#include <memory>
+#include <mutex>
 
 namespace fs = std::filesystem;
 
@@ -45,14 +47,18 @@ struct LogType
 class Logger
 {
 private:
-    static Logger *_instance;
+    static std::shared_ptr<Logger> _instance;
     static std::string _logFileOpeningLine;
     static bool _logDate;
 
     std::string _logFileName;
+    std::string _logFileName_full;
+    uint16_t _logFileCount = 0;
     std::fstream _logFile;
 
     fs::path _logsPath = fs::path("logs/");
+
+    std::mutex _mutex;
 
     struct tm get_time()
     {
@@ -64,20 +70,28 @@ private:
     std::string format_file_name(struct tm now)
     {
         char buffer[80];
-        std::strftime(buffer, sizeof(buffer), "%d-%m-%Y %H_%M_%S.log", &now);
+        std::strftime(buffer, sizeof(buffer), "%d-%m-%Y %H_%M_%S", &now);
         return (std::string)buffer;
     }
 
     void create_log_file()
     {
+        std::unique_lock<std::mutex> lock(_mutex);
+
         struct tm now = get_time();
-        _logFileName = format_file_name(now);
+        if (_logFileName.empty())
+        {
+            _logFileName = format_file_name(now);
+        }
+        std::ostringstream oss;
+        oss << _logFileName << "." << _logFileCount << ".log";
+        _logFileName_full = oss.str();
         if (!fs::exists(_logsPath) || !fs::is_directory(_logsPath))
         {
             fs::create_directories(_logsPath);
         }
-        fs::path logFilePath = _logsPath / _logFileName;
-        OpenLogFile();
+        fs::path logFilePath = _logsPath / _logFileName_full;
+        _logFile.open(logFilePath, std::ios::app);
         if (!_logFile.is_open())
         {
             std::cerr << "_logFile with path: " << logFilePath << " failed to open!\n";
@@ -91,7 +105,32 @@ private:
             _logFile << _logFileOpeningLine << '\n';
         }
         _logFile << "============= Logs Start =============\n";
-        CloseLogFile();
+        _logFileCount++;
+        close_log_file();
+    }
+
+    void open_log_file()
+    {
+        if (_logFile.is_open())
+        {
+            return;
+        }
+        fs::path logFilePath = _logsPath / _logFileName_full;
+        if (!fs::exists(logFilePath) || fs::file_size(logFilePath) >= (int)(INT32_MAX / 1000))
+        {
+            create_log_file();
+        }
+        logFilePath = _logsPath / _logFileName_full;
+        _logFile.open(logFilePath, std::ios::app);
+    }
+
+    void close_log_file()
+    {
+        if (!_logFile.is_open())
+        {
+            return;
+        }
+        _logFile.close();
     }
 
 public:
@@ -102,14 +141,14 @@ public:
 
     ~Logger()
     {
-        CloseLogFile();
+        close_log_file();
     }
 
-    static Logger *getInstance()
+    static std::shared_ptr<Logger> getInstance()
     {
         if (_instance == nullptr)
         {
-            _instance = new Logger();
+            _instance = std::make_shared<Logger>();
         }
         return _instance;
     }
@@ -124,28 +163,10 @@ public:
         _logDate = logDate;
     }
 
-    void OpenLogFile()
-    {
-        if (_logFile.is_open())
-        {
-            return;
-        }
-        fs::path logFilePath = _logsPath / _logFileName;
-        _logFile.open(logFilePath, std::ios::app);
-    }
-
-    void CloseLogFile()
-    {
-        if (!_logFile.is_open())
-        {
-            return;
-        }
-        _logFile.close();
-    }
-
     void LogMessage(LogType type, std::string message)
     {
-        OpenLogFile();
+        std::unique_lock<std::mutex> lock(_mutex);
+        open_log_file();
         struct tm now = get_time();
         char buffer[80];
         std::string format = "%H:%M:%S";
@@ -154,8 +175,11 @@ public:
             format = "%H:%M:%S %d-%m-%Y";
         }
         std::strftime(buffer, sizeof(buffer), format.c_str(), &now);
-        _logFile << "[" << buffer << "] = [" << type.toString() << "] = " << message << '\n';
-        CloseLogFile();
+        std::ostringstream oss;
+        oss << "[" << buffer << "] = [" << type.toString() << "] = " << message << '\n';
+        std::cout << oss.str();
+        _logFile << oss.str();
+        close_log_file();
     }
 };
 
@@ -179,12 +203,28 @@ public:
         Logger::getInstance()->LogMessage(LogType(MESS), oss.str()); \
     } while (false)
 
+#define LOG_FILE(message)                                                   \
+    do                                                                      \
+    {                                                                       \
+        std::ostringstream oss;                                             \
+        oss << "[" << __FILE__ << "] = [" << __LINE__ << "] = " << message; \
+        Logger::getInstance()->LogMessage(LogType(MESS), oss.str());        \
+    } while (false)
+
 #define LOG_WARNING(message)                                         \
     do                                                               \
     {                                                                \
         std::ostringstream oss;                                      \
         oss << message;                                              \
         Logger::getInstance()->LogMessage(LogType(WARN), oss.str()); \
+    } while (false)
+
+#define LOG_FILE_WARNING(message)                                           \
+    do                                                                      \
+    {                                                                       \
+        std::ostringstream oss;                                             \
+        oss << "[" << __FILE__ << "] = [" << __LINE__ << "] = " << message; \
+        Logger::getInstance()->LogMessage(LogType(WARN), oss.str());        \
     } while (false)
 
 #define LOG_ERROR(message)                                          \
@@ -195,12 +235,28 @@ public:
         Logger::getInstance()->LogMessage(LogType(ERR), oss.str()); \
     } while (false)
 
+#define LOG_FILE_ERROR(message)                                             \
+    do                                                                      \
+    {                                                                       \
+        std::ostringstream oss;                                             \
+        oss << "[" << __FILE__ << "] = [" << __LINE__ << "] = " << message; \
+        Logger::getInstance()->LogMessage(LogType(ERR), oss.str());         \
+    } while (false)
+
 #define LOG_CRITICAL(message)                                        \
     do                                                               \
     {                                                                \
         std::ostringstream oss;                                      \
         oss << message;                                              \
         Logger::getInstance()->LogMessage(LogType(CRIT), oss.str()); \
+    } while (false)
+
+#define LOG_FILE_CRITICAL(message)                                          \
+    do                                                                      \
+    {                                                                       \
+        std::ostringstream oss;                                             \
+        oss << "[" << __FILE__ << "] = [" << __LINE__ << "] = " << message; \
+        Logger::getInstance()->LogMessage(LogType(CRIT), oss.str());        \
     } while (false)
 
 #endif
