@@ -8,6 +8,7 @@
 #include <iostream>
 #include <filesystem>
 #include <string>
+#include <memory>
 
 namespace fs = std::filesystem;
 
@@ -45,7 +46,7 @@ struct LogType
 class Logger
 {
 private:
-    static Logger *_instance;
+    static std::shared_ptr<Logger> _instance;
     static std::string _logFileOpeningLine;
     static bool _logDate;
 
@@ -105,11 +106,11 @@ public:
         CloseLogFile();
     }
 
-    static Logger *getInstance()
+    static std::shared_ptr<Logger> getInstance()
     {
         if (_instance == nullptr)
         {
-            _instance = new Logger();
+            _instance = std::make_shared<Logger>();
         }
         return _instance;
     }
