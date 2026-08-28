@@ -60,7 +60,6 @@ private:
     fs::path _logsPath = fs::path("logs/");
 
     std::mutex _mutex;
-    std::condition_variable _cond;
 
     struct tm get_time()
     {
@@ -98,8 +97,6 @@ private:
         {
             std::cerr << "_logFile with path: " << logFilePath << " failed to open!\n";
         }
-        _cond.wait(lock, [this]()
-                   { return !_logFile.is_open(); });
         char time_buffer[40];
         std::strftime(time_buffer, sizeof(time_buffer), "%H:%M:%S %d-%m-%Y", &now);
         _logFile << "======================================\n";
@@ -171,8 +168,6 @@ public:
     {
         std::unique_lock<std::mutex> lock(_mutex);
         open_log_file();
-        _cond.wait(lock, [this]()
-                   { return !_logFile.is_open(); });
         struct tm now = get_time();
         char buffer[80];
         std::string format = "%H:%M:%S";
